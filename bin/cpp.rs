@@ -8,10 +8,18 @@ extern crate font_metrics;
 
 use std::fs::File;
 use std::io::Write;
+use std::path::Path;
 
 use num_rational::Ratio;
+use tempdir::TempDir;
 
 use font_metrics::ratio_into_f32;
+
+struct CppTestVariables {
+    font_name: String,
+    font_size: i32,
+    text_width: i32
+}
 
 fn main() {
     let matches = clap::App::new("cpp")
@@ -26,7 +34,7 @@ fn main() {
                 .required(true),
         )
         .arg(
-            clap::Arg::with_name("picas")
+            clap::Arg::with_name("width")
                 .short("w")
                 .long("width")
                 .help("Number of picas per line")
@@ -35,56 +43,46 @@ fn main() {
         )
         .get_matches();
 
-    let font_name = matches.value_of("font").unwrap();
-    let picas_per_line = matches.value_of("picas").unwrap().parse::<i32>().unwrap();
+    let test_vars = CppTestVariables {
+        font_name: matches.value_of("font").unwrap().to_owned(),
+        font_size: 12,
+        text_width: matches.value_of("width").unwrap().parse::<i32>().unwrap()
+    };
 
-    let working_dir = tempdir::TempDir::new("cpp").unwrap();
+    let dir = TempDir::new("cpp").unwrap();
+    {
+        generate_pdf(&dir, &test_vars);
 
-    let latex_file_path = working_dir.path().join("cpp.tex");
+        let cpp = analyze_pdf(&dir.path().join("cpp.pdf"), &test_vars);
 
-    let mut latex_file = File::create(&latex_file_path).unwrap();
-    let source = generate_latex_source(font_name, 12, 36);
-    latex_file.write_all(source.as_bytes()).unwrap();
+        println!(
+            "characters per pica: {:?} (~{:.2})",
+            cpp,
+            ratio_into_f32(cpp).unwrap()
+        );
+    }
+}
+
+fn generate_pdf(dir: &TempDir, vars: &CppTestVariables) {
+    let path = dir.path().join("cpp.tex");
+
+    let mut file = File::create(&path).unwrap();
+    let source = generate_latex_source(vars);
+    file.write_all(source.as_bytes()).unwrap();
 
     let mut xelatex = std::process::Command::new("xelatex");
     let command = xelatex
-        .current_dir(&working_dir)
+        .current_dir(&dir)
         .arg("-quiet")
         .arg("-interaction=nonstopmode")
-        .arg(latex_file_path.to_str().unwrap().to_owned());
+        .arg(path.into_os_string().into_string().unwrap());
 
     println!("{:?}", &command);
 
     command.status().unwrap();
-
-    let pdf_file_path = working_dir.path().join("cpp.pdf");
-
-    let document = lopdf::Document::load(pdf_file_path).unwrap();
-    let text = extract_text(document);
-
-    let cpp = chars_per_line(text) / picas_per_line;
-
-    println!(
-        "characters per pica: {:?} (~{:.2})",
-        cpp,
-        ratio_into_f32(cpp).unwrap()
-    );
-
-    working_dir.close().unwrap();
 }
 
-fn chars_per_line(text: String) -> Ratio<i32> {
-    let lines: Vec<&str> = text.trim().lines().collect();
-    let lines_except_last = &lines[0..lines.len() - 1];
-
-    let total_chars = lines_except_last
-        .iter()
-        .fold(0, |sum, line| sum + line.len());
-
-    Ratio::new(total_chars as i32, lines.len() as i32)
-}
-
-fn generate_latex_source(font_name: &str, font_size: i32, text_width: i32) -> String {
+fn generate_latex_source(vars: &CppTestVariables) -> String {
     format!(
         r"
 \documentclass[{font_size}pt]{{article}}
@@ -97,10 +95,28 @@ fn generate_latex_source(font_name: &str, font_size: i32, text_width: i32) -> St
 \blindtext
 \end{{document}}
     ",
-        font_name = font_name,
-        font_size = font_size,
-        text_width = text_width
+        font_name = vars.font_name,
+        font_size = vars.font_size,
+        text_width = vars.text_width
     )
+}
+
+fn analyze_pdf(path: &Path, vars: &CppTestVariables) -> Ratio<i32> {
+    let document = lopdf::Document::load(path).unwrap();
+    let text = extract_text(document);
+
+    chars_per_line(text) / vars.text_width
+}
+
+fn chars_per_line(text: String) -> Ratio<i32> {
+    let lines: Vec<&str> = text.trim().lines().collect();
+    let lines_except_last = &lines[0..lines.len() - 1];
+
+    let total_chars = lines_except_last
+        .iter()
+        .fold(0, |sum, line| sum + line.len());
+
+    Ratio::new(total_chars as i32, lines.len() as i32)
 }
 
 fn extract_text(document: lopdf::Document) -> String {
