@@ -53,7 +53,7 @@ fn main() {
 
     let test_vars = CppTestVariables {
         font_name: matches.value_of("font").unwrap().to_owned(),
-        font_size: 12,
+        font_size: matches.value_of("size").unwrap().parse::<i32>().unwrap(),
         text_width: matches.value_of("width").unwrap().parse::<i32>().unwrap()
     };
 
