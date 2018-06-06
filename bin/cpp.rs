@@ -58,17 +58,15 @@ fn main() {
     };
 
     let dir = TempDir::new("cpp").unwrap();
-    {
-        let pdf_path = generate_pdf(dir.path(), &test_vars);
-        let cpp = analyze_pdf(&pdf_path, &test_vars);
 
-        println!(
-            "characters per pica: {:?} (~{:.2})",
-            cpp,
-            ratio_into_f32(cpp).unwrap()
-        );
-    }
-    dir.close().unwrap();
+    let pdf_path = generate_pdf(dir.path(), &test_vars);
+    let cpp = analyze_pdf(&pdf_path, &test_vars);
+
+    println!(
+        "characters per pica: {:?} (~{:.2})",
+        cpp,
+        ratio_into_f32(cpp).unwrap()
+    );
 }
 
 fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
