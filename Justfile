@@ -1,11 +1,13 @@
-cpp-latex-build font_name font_size="12pt" text_width="36pc":
+cpp font_name font_size="12" text_width="36":
     rm -f cpp_vars.aux
     >>cpp_vars.aux printf "\\def%sargfontname{%s}" "\\" "{{font_name}}"
-    >>cpp_vars.aux printf "\\def%sargfontsize{%s}" "\\" "{{font_size}}"
-    >>cpp_vars.aux printf "\\def%sargtextwidth{%s}" "\\" "{{text_width}}"
-    xelatex -interaction=nonstopmode -jobname=cpp "\input{cpp_vars.aux}\input{cpp}"
+    >>cpp_vars.aux printf "\\def%sargfontsize{%s}" "\\" "{{font_size}}pt"
+    >>cpp_vars.aux printf "\\def%sargtextwidth{%s}" "\\" "{{text_width}}pc"
 
-cpp-latex-clean:
+    xelatex -quiet -interaction=nonstopmode -jobname=cpp "\input{cpp_vars.aux}\input{cpp}"
+
+    cargo run --bin cpp -- "cpp.pdf" --width {{text_width}}
+
     rm -f cpp_vars.aux cpp.aux cpp.log cpp.pdf
 
 xheight file_name:

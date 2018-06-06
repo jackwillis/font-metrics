@@ -1,14 +1,37 @@
-extern crate font_metrics;
+extern crate clap;
+
 extern crate lopdf;
 extern crate num_rational;
 extern crate pdf_extract;
 
-use font_metrics::ratio_into_f32;
+extern crate font_metrics;
+
 use num_rational::Ratio;
 
+use font_metrics::ratio_into_f32;
+
 fn main() {
-    let filename = "cpp.pdf";
-    let picas_per_line = 32;
+    let matches = clap::App::new("cpp")
+        .about("Calculates the characters per pica (cpp) of specially formatted PDF file.")
+        .author("https://github.com/jackwillis/font-metrics/")
+        .arg(
+            clap::Arg::with_name("FILE")
+                .help("The PDF file to analyze")
+                .required(true)
+                .index(1),
+        )
+        .arg(
+            clap::Arg::with_name("picas")
+                .short("w")
+                .long("width")
+                .help("Number of picas per line in the PDF file")
+                .required(true)
+                .takes_value(true),
+        )
+        .get_matches();
+
+    let filename = matches.value_of("FILE").unwrap();
+    let picas_per_line = matches.value_of("picas").unwrap().parse::<i32>().unwrap();
 
     let document = lopdf::Document::load(filename).unwrap();
     let text = extract_text(document);
