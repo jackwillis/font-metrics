@@ -18,12 +18,14 @@ use font_metrics::ratio_into_f32;
 struct CppTestVariables {
     font_name: String,
     font_size: i32,
-    text_width: i32
+    text_width: i32,
 }
 
 fn main() {
     let matches = clap::App::new("cpp")
-        .about("Measures the characters per pica (cpp) of TrueType system fonts on a standard page.")
+        .about(
+            "Measures the characters per pica (cpp) of TrueType system fonts on a standard page.",
+        )
         .author("https://github.com/jackwillis/font-metrics/")
         .arg(
             clap::Arg::with_name("font")
@@ -54,7 +56,7 @@ fn main() {
     let test_vars = CppTestVariables {
         font_name: matches.value_of("font").unwrap().to_owned(),
         font_size: matches.value_of("size").unwrap().parse::<i32>().unwrap(),
-        text_width: matches.value_of("width").unwrap().parse::<i32>().unwrap()
+        text_width: matches.value_of("width").unwrap().parse::<i32>().unwrap(),
     };
 
     let dir = TempDir::new("cpp").unwrap();
@@ -71,9 +73,9 @@ fn main() {
 
 fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
     let tex_path = working_dir.join("cpp.tex");
-    let mut file = File::create(&tex_path).unwrap();
+    let mut file = File::create(&tex_path).expect("Couldn't create temp file");
     let source = generate_latex_source(vars);
-    file.write_all(source.as_bytes()).unwrap();
+    file.write_all(source.as_bytes()).expect("Couldn't write to temp file");
 
     let mut xelatex = std::process::Command::new("xelatex");
     let command = xelatex
@@ -84,7 +86,7 @@ fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
 
     println!("{:?}", &command);
 
-    command.status().unwrap();
+    command.status().expect("Xelatex crashed!");
 
     PathBuf::from(working_dir.join("cpp.pdf"))
 }
