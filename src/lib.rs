@@ -17,9 +17,7 @@ pub fn x_height_ratio(font: &Font) -> Ratio<i32> {
 pub fn glyph_height(glyph: Glyph) -> i32 {
     let glyph = glyph.standalone();
 
-    let extents: Rect<i32> = glyph
-        .get_data().unwrap()
-        .extents.unwrap();
+    let extents: Rect<i32> = glyph.get_data().unwrap().extents.unwrap();
 
     extents.max.y - extents.min.y
 }
@@ -34,6 +32,6 @@ pub fn read_font_from_filename(filename: &str) -> Font {
 pub fn ratio_into_f32(ratio: Ratio<i32>) -> Option<f32> {
     match ratio.denom() {
         0 => None,
-        _ => Some(((*ratio.numer() as f64) / (*ratio.denom() as f64)) as f32)
+        _ => Some(((*ratio.numer() as f64) / (*ratio.denom() as f64)) as f32),
     }
 }

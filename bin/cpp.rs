@@ -15,15 +15,20 @@ fn main() {
 
     let cpp = chars_per_line(text) / picas_per_line;
 
-    println!("characters per pica: {:?} (~{:.2})",
-             cpp, ratio_into_f32(cpp).unwrap());
+    println!(
+        "characters per pica: {:?} (~{:.2})",
+        cpp,
+        ratio_into_f32(cpp).unwrap()
+    );
 }
 
 fn chars_per_line(text: String) -> Ratio<i32> {
     let lines: Vec<&str> = text.trim().lines().collect();
     let lines_except_last = &lines[0..lines.len() - 1];
 
-    let total_chars = lines_except_last.iter().fold(0, |sum, line| sum + line.len());
+    let total_chars = lines_except_last
+        .iter()
+        .fold(0, |sum, line| sum + line.len());
 
     Ratio::new(total_chars as i32, lines.len() as i32)
 }
