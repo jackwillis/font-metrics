@@ -9,6 +9,7 @@ lopdf = "0.15"
 num-rational = "0.1"
 pdf-extract = "0.4"
 rusttype = "0.6"
+tempdir = "0.3"
 
 [dev-dependencies]
 just = "0.3"

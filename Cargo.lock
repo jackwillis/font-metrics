@@ -257,6 +257,7 @@ dependencies = [
  "num-rational 0.1.42 (registry+https://github.com/rust-lang/crates.io-index)",
  "pdf-extract 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rusttype 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tempdir 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
