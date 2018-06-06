@@ -5,14 +5,12 @@ authors = ["Jack Willis <jack@attac.us>"]
 
 [dependencies]
 clap = "2.31"
+image = "0.19"
 lopdf = "0.15"
 num-rational = "0.1"
 pdf-extract = "0.4"
 rusttype = "0.6"
 tempdir = "0.3"
-
-[dev-dependencies]
-just = "0.3"
 
 [lib]
 name = "font_metrics"
@@ -25,3 +23,7 @@ path = "bin/xheight.rs"
 [[bin]]
 name = "cpp"
 path = "bin/cpp.rs"
+
+[[bin]]
+name = "density"
+path = "bin/density.rs"

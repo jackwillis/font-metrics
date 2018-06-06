@@ -17,23 +17,23 @@ use font_metrics::ratio_into_f32;
 
 struct CppTestVariables {
     font_name: String,
+    font_directory: String,
     font_size: i32,
     text_width: i32,
+    verbose: bool
 }
 
 fn main() {
     let matches = clap::App::new("cpp")
         .about(
-            "Measures the characters per pica (cpp) of TrueType system fonts on a standard page.",
+            "Measures the characters per pica (cpp) of TrueType fonts on a standard test page.",
         )
         .author("https://github.com/jackwillis/font-metrics/")
         .arg(
-            clap::Arg::with_name("font")
-                .short("f")
-                .long("font")
-                .help("Name of font to test")
-                .takes_value(true)
-                .required(true),
+            clap::Arg::with_name("FILENAME")
+                .help("The location of the TrueType font to measure (ex. C:\\Windows\\Fonts\\Tahoma.ttf)")
+                .required(true)
+                .index(1)
         )
         .arg(
             clap::Arg::with_name("size")
@@ -51,12 +51,33 @@ fn main() {
                 .takes_value(true)
                 .default_value("32"),
         )
+        .arg(
+            clap::Arg::with_name("verbose")
+                .short("v")
+                .long("verbose")
+                .help("Prints extra debug messages")
+        )
         .get_matches();
 
+    let font_filename = matches.value_of("FILENAME").unwrap();
+    let font_path = Path::new(font_filename);
+
+    if !font_path.is_file() {
+        panic!(format!("{:?} is not a file!", font_path));
+    }
+
     let test_vars = CppTestVariables {
-        font_name: matches.value_of("font").unwrap().to_owned(),
+        font_name: font_path.file_stem().unwrap().to_str().unwrap().to_owned(),
+        font_directory: {
+            let dir = font_path.parent().unwrap();
+            let dir_str = dir.to_str().unwrap().to_owned();
+
+            // xelatex hates Windows-style paths
+            dir_str.replace("\\", "/")
+        },
         font_size: matches.value_of("size").unwrap().parse::<i32>().unwrap(),
         text_width: matches.value_of("width").unwrap().parse::<i32>().unwrap(),
+        verbose: matches.is_present("verbose")
     };
 
     let dir = TempDir::new("cpp").unwrap();
@@ -75,7 +96,13 @@ fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
     let tex_path = working_dir.join("cpp.tex");
     let mut file = File::create(&tex_path).expect("Couldn't create temp file");
     let source = generate_latex_source(vars);
-    file.write_all(source.as_bytes()).expect("Couldn't write to temp file");
+
+    if vars.verbose {
+        println!("{}", source);
+    }
+
+    file.write_all(source.as_bytes())
+        .expect("Couldn't write to temp file");
 
     let mut xelatex = std::process::Command::new("xelatex");
     let command = xelatex
@@ -84,9 +111,14 @@ fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
         .arg("-interaction=nonstopmode")
         .arg(tex_path.into_os_string().into_string().unwrap());
 
-    println!("{:?}", &command);
+    if vars.verbose {
+        println!("{:?}", &command);
+    }
 
-    command.status().expect("Xelatex crashed!");
+    let status = command.status().expect("xelatex could not be found");
+    if !status.success() {
+        panic!("xelatex did not exit successfully");
+    }
 
     PathBuf::from(working_dir.join("cpp.pdf"))
 }
@@ -98,13 +130,14 @@ fn generate_latex_source(vars: &CppTestVariables) -> String {
 \usepackage[textwidth = {text_width}pc]{{geometry}}
 \usepackage{{fontspec, microtype, blindtext}}
 \pagestyle{{empty}}
-\setmainfont{{{font_name}}}[OpticalSize = 0]
+\setmainfont{{{font_name}}}[OpticalSize = 0, Path = {font_directory}/]
 \begin{{document}}
 \noindent
 \blindtext
 \end{{document}}
     ",
         font_name = vars.font_name,
+        font_directory = vars.font_directory,
         font_size = vars.font_size,
         text_width = vars.text_width
     )

@@ -13,10 +13,14 @@ pub fn glyph_height(glyph: Glyph) -> i32 {
 }
 
 pub fn read_font_from_filename(filename: &str) -> Font {
-    let data = std::fs::read(filename).unwrap();
-    let font_collection = FontCollection::from_bytes(data).unwrap();
+    let data = std::fs::read(filename)
+        .expect(format!("Couldn't open font file: {}", filename).as_str());
 
-    font_collection.into_font().unwrap()
+    let font_collection = FontCollection::from_bytes(data)
+        .expect("Could not parse font file as TrueType");
+
+    font_collection.into_font()
+        .expect("Font file contains multiple fonts")
 }
 
 pub fn ratio_into_f32(ratio: Ratio<i32>) -> Option<f32> {
