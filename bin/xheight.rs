@@ -29,8 +29,7 @@ fn main() {
         "x-height ratio for {}: {} (~{:.3})",
         filename,
         ratio,
-        font_metrics::ratio_into_f32(ratio)
-            .expect("Glyphs H, I, and T all had zero height.")
+        font_metrics::ratio_into_f32(ratio).expect("Glyphs H, I, and T all had zero height.")
     );
 }
 

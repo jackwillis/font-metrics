@@ -20,10 +20,27 @@ struct CppTestVariables {
     font_directory: String,
     font_size: i32,
     text_width: i32,
-    verbose: bool
+    verbose: bool,
 }
 
 fn main() {
+    let test_variables = parse_args();
+
+    let temp_dir = TempDir::new("cpp").expect("Couldn't create temporary directory");
+
+    let pdf_path = generate_pdf(temp_dir.path(), &test_variables);
+    let cpp_ratio = analyze_pdf(&pdf_path, &test_variables);
+
+    temp_dir.close().expect("Couldn't delete temporary directory");
+
+    println!(
+        "characters per pica: {:?} (~{:.2})",
+        cpp_ratio,
+        ratio_into_f32(cpp_ratio).unwrap()
+    );
+}
+
+fn parse_args() -> CppTestVariables {
     let matches = clap::App::new("cpp")
         .about(
             "Measures the characters per pica (cpp) of TrueType fonts on a standard test page.",
@@ -66,7 +83,7 @@ fn main() {
         panic!(format!("{:?} is not a file!", font_path));
     }
 
-    let test_vars = CppTestVariables {
+    CppTestVariables {
         font_name: font_path.file_stem().unwrap().to_str().unwrap().to_owned(),
         font_directory: {
             let dir = font_path.parent().unwrap();
@@ -77,31 +94,20 @@ fn main() {
         },
         font_size: matches.value_of("size").unwrap().parse::<i32>().unwrap(),
         text_width: matches.value_of("width").unwrap().parse::<i32>().unwrap(),
-        verbose: matches.is_present("verbose")
-    };
-
-    let dir = TempDir::new("cpp").unwrap();
-
-    let pdf_path = generate_pdf(dir.path(), &test_vars);
-    let cpp = analyze_pdf(&pdf_path, &test_vars);
-
-    println!(
-        "characters per pica: {:?} (~{:.2})",
-        cpp,
-        ratio_into_f32(cpp).unwrap()
-    );
+        verbose: matches.is_present("verbose"),
+    }
 }
 
-fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
+fn generate_pdf(working_dir: &Path, test_vars: &CppTestVariables) -> PathBuf {
     let tex_path = working_dir.join("cpp.tex");
     let mut file = File::create(&tex_path).expect("Couldn't create temp file");
-    let source = generate_latex_source(vars);
+    let latex_source = generate_latex_source(test_vars);
 
-    if vars.verbose {
-        println!("{}", source);
+    if test_vars.verbose {
+        println!("{}", latex_source);
     }
 
-    file.write_all(source.as_bytes())
+    file.write_all(latex_source.as_bytes())
         .expect("Couldn't write to temp file");
 
     let mut xelatex = std::process::Command::new("xelatex");
@@ -111,8 +117,8 @@ fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
         .arg("-interaction=nonstopmode")
         .arg(tex_path.into_os_string().into_string().unwrap());
 
-    if vars.verbose {
-        println!("{:?}", &command);
+    if test_vars.verbose {
+        println!("{:?}", command);
     }
 
     let status = command.status().expect("xelatex could not be found");
@@ -123,7 +129,7 @@ fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
     PathBuf::from(working_dir.join("cpp.pdf"))
 }
 
-fn generate_latex_source(vars: &CppTestVariables) -> String {
+fn generate_latex_source(test_vars: &CppTestVariables) -> String {
     format!(
         r"
 \documentclass[{font_size}pt]{{article}}
@@ -136,10 +142,10 @@ fn generate_latex_source(vars: &CppTestVariables) -> String {
 \blindtext
 \end{{document}}
     ",
-        font_name = vars.font_name,
-        font_directory = vars.font_directory,
-        font_size = vars.font_size,
-        text_width = vars.text_width
+        font_name = test_vars.font_name,
+        font_directory = test_vars.font_directory,
+        font_size = test_vars.font_size,
+        text_width = test_vars.text_width
     )
 }
 
