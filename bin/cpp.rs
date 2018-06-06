@@ -8,7 +8,7 @@ extern crate font_metrics;
 
 use std::fs::File;
 use std::io::Write;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use num_rational::Ratio;
 use tempdir::TempDir;
@@ -23,7 +23,7 @@ struct CppTestVariables {
 
 fn main() {
     let matches = clap::App::new("cpp")
-        .about("Calculates the characters per pica (cpp) of specially formatted PDF file.")
+        .about("Measures the characters per pica (cpp) of TrueType system fonts on a standard page.")
         .author("https://github.com/jackwillis/font-metrics/")
         .arg(
             clap::Arg::with_name("font")
@@ -34,10 +34,18 @@ fn main() {
                 .required(true),
         )
         .arg(
+            clap::Arg::with_name("size")
+                .short("s")
+                .long("size")
+                .help("Font size in points")
+                .takes_value(true)
+                .default_value("12"),
+        )
+        .arg(
             clap::Arg::with_name("width")
                 .short("w")
                 .long("width")
-                .help("Number of picas per line")
+                .help("Width of the test page's printable area in picas")
                 .takes_value(true)
                 .default_value("32"),
         )
@@ -51,9 +59,8 @@ fn main() {
 
     let dir = TempDir::new("cpp").unwrap();
     {
-        generate_pdf(&dir, &test_vars);
-
-        let cpp = analyze_pdf(&dir.path().join("cpp.pdf"), &test_vars);
+        let pdf_path = generate_pdf(dir.path(), &test_vars);
+        let cpp = analyze_pdf(&pdf_path, &test_vars);
 
         println!(
             "characters per pica: {:?} (~{:.2})",
@@ -61,25 +68,27 @@ fn main() {
             ratio_into_f32(cpp).unwrap()
         );
     }
+    dir.close().unwrap();
 }
 
-fn generate_pdf(dir: &TempDir, vars: &CppTestVariables) {
-    let path = dir.path().join("cpp.tex");
-
-    let mut file = File::create(&path).unwrap();
+fn generate_pdf(working_dir: &Path, vars: &CppTestVariables) -> PathBuf {
+    let tex_path = working_dir.join("cpp.tex");
+    let mut file = File::create(&tex_path).unwrap();
     let source = generate_latex_source(vars);
     file.write_all(source.as_bytes()).unwrap();
 
     let mut xelatex = std::process::Command::new("xelatex");
     let command = xelatex
-        .current_dir(&dir)
+        .current_dir(&working_dir)
         .arg("-quiet")
         .arg("-interaction=nonstopmode")
-        .arg(path.into_os_string().into_string().unwrap());
+        .arg(tex_path.into_os_string().into_string().unwrap());
 
     println!("{:?}", &command);
 
     command.status().unwrap();
+
+    PathBuf::from(working_dir.join("cpp.pdf"))
 }
 
 fn generate_latex_source(vars: &CppTestVariables) -> String {
