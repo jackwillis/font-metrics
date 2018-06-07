@@ -84,7 +84,10 @@ fn parse_args() -> CppTestVariables {
     }
 
     CppTestVariables {
-        font_name: font_path.file_stem().unwrap().to_str().unwrap().to_owned(),
+        font_name: {
+            let stem = font_path.file_stem().unwrap();
+            stem.to_str().unwrap().to_owned()
+        },
         font_directory: {
             let dir = font_path.parent().unwrap();
             let dir_str = dir.to_str().unwrap().to_owned();
@@ -158,7 +161,9 @@ fn analyze_pdf(path: &Path, vars: &CppTestVariables) -> Ratio<i32> {
 
 fn chars_per_line(text: String) -> Ratio<i32> {
     let lines: Vec<&str> = text.trim().lines().collect();
-    let lines_except_last = &lines[0..lines.len() - 1];
+
+    // throw away the last line since it's usually not full
+    let lines_except_last: &[&str] = &lines[0..lines.len() - 1];
 
     let total_chars = lines_except_last
         .iter()
