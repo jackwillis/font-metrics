@@ -31,7 +31,9 @@ fn main() {
     let pdf_path = generate_pdf(temp_dir.path(), &test_variables);
     let cpp_ratio = analyze_pdf(&pdf_path, &test_variables);
 
-    temp_dir.close().expect("Couldn't delete temporary directory");
+    temp_dir
+        .close()
+        .expect("Couldn't delete temporary directory");
 
     println!(
         "characters per pica: {:?} (~{:.2})",
