@@ -7,22 +7,25 @@ use rusttype::{point, PositionedGlyph, Scale};
 use font_metrics::read_font_from_filename;
 
 fn main() {
-    let font = read_font_from_filename("C:\\Windows\\Fonts\\constan.ttf");
+    let font = read_font_from_filename("C:\\Windows\\Fonts\\Ariblk.ttf");
 
     let font_size = 256.0;
-    let scale = Scale { x: font_size, y: font_size };
+    let scale = Scale {
+        x: font_size,
+        y: font_size,
+    };
     let origin = point(0.0, 0.0);
 
-    let x_glyph: PositionedGlyph = font.glyph('x').scaled(scale).positioned(origin);
+    let get_glyph =
+        |id: char| -> PositionedGlyph { font.glyph(id).scaled(scale).positioned(origin) };
 
     let test_alphabet = "abcdefghijklmnopqrstuvwxyz".chars();
+    let test_glyphs = test_alphabet.into_iter().map(get_glyph);
 
-    let densities: Vec<f64> = test_alphabet
-        .into_iter()
-        .map(|char| {
-            let test_glyph = font.glyph(char).scaled(scale).positioned(origin);
-            calculate_glyph_density(&x_glyph, &test_glyph)
-        })
+    let x_glyph = get_glyph('x');
+
+    let densities: Vec<f64> = test_glyphs
+        .map(|test_glyph| calculate_glyph_density(&x_glyph, &test_glyph))
         .collect();
 
     let densities_sum = densities.iter().sum::<f64>();
