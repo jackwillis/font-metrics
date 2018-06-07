@@ -1,3 +1,4 @@
+extern crate clap;
 extern crate rusttype;
 
 extern crate font_metrics;
@@ -8,21 +9,39 @@ use font_metrics::read_font_from_filename;
 
 struct DensityTestVariables<'a> {
     font: Font<'a>,
-    resolution: f32
+    resolution: f32,
 }
 
 fn main() {
-    let test_vars = DensityTestVariables {
-        font: read_font_from_filename("C:\\Windows\\Fonts\\Ariblk.ttf"),
-        resolution: 256.0
-    };
-
-    let density = calculate_font_density(test_vars);
+    let test_vars = parse_args();
+    let density = calculate_font_density(&test_vars);
 
     println!("density: {:.3}", density);
 }
 
-fn calculate_font_density(test_vars: DensityTestVariables) -> f64 {
+fn parse_args<'a>() -> DensityTestVariables<'a> {
+    let matches = clap::App::new("density")
+        .about(
+            "Measures the density of TrueType fonts.\nCalculated from the amount inked between the baseline and x-height of lowercase Latin letters.",
+        )
+        .author("https://github.com/jackwillis/font-metrics/")
+        .arg(
+            clap::Arg::with_name("FILENAME")
+                .help("The location of the TrueType font to measure (ex. C:\\Windows\\Fonts\\Constan.ttf)")
+                .required(true)
+                .index(1)
+        )
+        .get_matches();
+
+    let filename = matches.value_of("FILENAME").unwrap();
+
+    DensityTestVariables {
+        font: read_font_from_filename(filename.to_owned()),
+        resolution: 256.0,
+    }
+}
+
+fn calculate_font_density(test_vars: &DensityTestVariables) -> f64 {
     let scale = rusttype::Scale {
         x: test_vars.resolution,
         y: test_vars.resolution,

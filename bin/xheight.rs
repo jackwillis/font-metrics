@@ -5,9 +5,9 @@ extern crate rusttype;
 extern crate font_metrics;
 
 use num_rational::Ratio;
-use rusttype::Font;
+use rusttype::{Font, Glyph};
 
-use font_metrics::{glyph_height, read_font_from_filename};
+use font_metrics::read_font_from_filename;
 
 fn main() {
     let matches = clap::App::new("xheight")
@@ -22,7 +22,7 @@ fn main() {
         .get_matches();
 
     let filename = matches.value_of("FILENAME").unwrap();
-    let font = read_font_from_filename(filename);
+    let font = read_font_from_filename(filename.to_owned());
     let ratio = x_height_ratio(&font);
 
     println!(
@@ -45,4 +45,12 @@ pub fn x_height_ratio(font: &Font) -> Ratio<i32> {
     let cap_heights_sum = cap_height_glyphs.map(glyph_height).sum::<i32>();
 
     Ratio::new(x_heights_sum, cap_heights_sum)
+}
+
+pub fn glyph_height(glyph: Glyph) -> i32 {
+    let glyph = glyph.standalone();
+
+    let extents: rusttype::Rect<i32> = glyph.get_data().unwrap().extents.unwrap();
+
+    extents.max.y - extents.min.y
 }
