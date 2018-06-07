@@ -2,22 +2,35 @@ extern crate rusttype;
 
 extern crate font_metrics;
 
-use rusttype::{point, PositionedGlyph, Scale};
+use rusttype::{Font, PositionedGlyph};
 
 use font_metrics::read_font_from_filename;
 
-fn main() {
-    let font = read_font_from_filename("C:\\Windows\\Fonts\\Ariblk.ttf");
+struct DensityTestVariables<'a> {
+    font: Font<'a>,
+    resolution: f32
+}
 
-    let font_size = 256.0;
-    let scale = Scale {
-        x: font_size,
-        y: font_size,
+fn main() {
+    let test_vars = DensityTestVariables {
+        font: read_font_from_filename("C:\\Windows\\Fonts\\Ariblk.ttf"),
+        resolution: 256.0
     };
-    let origin = point(0.0, 0.0);
+
+    let density = calculate_font_density(test_vars);
+
+    println!("density: {:.3}", density);
+}
+
+fn calculate_font_density(test_vars: DensityTestVariables) -> f64 {
+    let scale = rusttype::Scale {
+        x: test_vars.resolution,
+        y: test_vars.resolution,
+    };
+    let origin = rusttype::point(0.0, 0.0);
 
     let get_glyph =
-        |id: char| -> PositionedGlyph { font.glyph(id).scaled(scale).positioned(origin) };
+        |id: char| -> PositionedGlyph { test_vars.font.glyph(id).scaled(scale).positioned(origin) };
 
     let test_alphabet = "abcdefghijklmnopqrstuvwxyz".chars();
     let test_glyphs = test_alphabet.into_iter().map(get_glyph);
@@ -29,9 +42,7 @@ fn main() {
         .collect();
 
     let densities_sum = densities.iter().sum::<f64>();
-    let average_density = densities_sum / (densities.len() as f64);
-
-    println!("average density: {:.3}", average_density);
+    densities_sum / (densities.len() as f64)
 }
 
 fn calculate_glyph_density(x_glyph: &PositionedGlyph, test_glyph: &PositionedGlyph) -> f64 {
