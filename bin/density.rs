@@ -1,10 +1,8 @@
-extern crate image;
 extern crate num_rational;
 extern crate rusttype;
 
 extern crate font_metrics;
 
-use image::{DynamicImage, Rgba};
 use num_rational::Ratio;
 use rusttype::{point, PositionedGlyph, Scale};
 
@@ -37,35 +35,6 @@ fn main() {
     let y_direction_adjust = test_glyph_bb.min.y - x_glyph_bb.min.y;
     let test_glyph_width = test_glyph_bb.max.x - test_glyph_bb.min.x;
 
-    let mut image = DynamicImage::new_rgba8(test_glyph_width as u32, x_glyph_height as u32).to_rgba();
-
-
-    //////////////////
-
-    font.glyph('x')
-        .scaled(scale)
-        .positioned(origin)
-        .draw(|x, y, v| {
-            /*
-        let alpha: u8 = if v > 0.5 { 255 } else { 0 };
-        let color = Rgba { data: [0, 0, 0, alpha] };
-
-        //println!("{} {} {}", x, y, v);
-        image.put_pixel(x, y, color);
-        */
-            if v > 0.5 && x < (test_glyph_width as u32) && y < (x_glyph_height as u32) {
-                image.put_pixel(
-                    x,
-                    y,
-                    Rgba {
-                        data: [200, 160, 220, 255],
-                    },
-                )
-            }
-        });
-
-    //////////////
-
     let mut inked_pixels = 0;
 
     test_glyph.draw(|x, y, v| {
@@ -75,16 +44,7 @@ fn main() {
             return;
         }
 
-
-        println!("\n\n");
-        println!("test {:?}", test_glyph_bb);
-        println!("x {:?}", x_glyph_bb);
-        println!("x {} y {}", x, y);
-
         if v > 0.5 {
-            let black = Rgba { data: [0, 0, 0, 255] };
-            image.put_pixel(x, y as u32, black);
-
             inked_pixels += 1;
         };
     });
@@ -93,17 +53,4 @@ fn main() {
     let density = Ratio::new(inked_pixels, area);
 
     println!("density: {:?}", density);
-
-    // Save the image to a png file
-    image.save("image_example.png").unwrap();
-    println!("Generated: image_example.png");
-
-//    let ratios = vec![Ratio::new(1, 3), Ratio::new(2, 7), Ratio::new(3, 10)];
-//
-//    let sum = ratios.iter()
-//        .fold(Ratio::new(0, 1), |acc, x| acc + x);
-//
-//    let average = sum / ratios.len();
-//
-//    println!("{:?}", average);
 }
