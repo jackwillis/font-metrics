@@ -50,7 +50,7 @@ fn parse_args() -> CharsPerPicaTest {
         .author("https://github.com/jackwillis/font-metrics/")
         .arg(
             clap::Arg::with_name("FILENAME")
-                .help("The location of the TrueType font to measure (ex. C:\\Windows\\Fonts\\Tahoma.ttf)")
+                .help("The location of the TrueType font to measure (ex. C:\\Windows\\Fonts\\Arial.ttf)")
                 .required(true)
                 .index(1)
         )

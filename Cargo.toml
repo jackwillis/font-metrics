@@ -4,7 +4,6 @@ version = "0.0.4"
 authors = ["Jack Willis <jack@attac.us>"]
 license = "GPL-3.0"
 description = "Provides binaries (fm-cpp, fm-density, fm-xheight) for measuring TrueType fonts."
-documentation = "https://docs.rs/font_metrics/"
 repository = "https://github.com/jackwillis/font-metrics/"
 
 [dependencies]
@@ -18,11 +17,14 @@ tempdir = "0.3"
 [[bin]]
 name = "fm-xheight"
 path = "bin/fm-xheight.rs"
+doc = true
 
 [[bin]]
 name = "fm-cpp"
 path = "bin/fm-cpp.rs"
+doc = true
 
 [[bin]]
 name = "fm-density"
 path = "bin/fm-density.rs"
+doc = true

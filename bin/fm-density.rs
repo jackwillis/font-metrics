@@ -1,15 +1,14 @@
 extern crate clap;
-extern crate rusttype;
-
 extern crate font_metrics;
-
+extern crate rusttype;
+use font_metrics::read_font_from_filename;
 use rusttype::{Font, PositionedGlyph};
 
-use font_metrics::read_font_from_filename;
+struct DensityTest<'a> {
+    pub font: Font<'a>,
 
-struct DensityTestVariables<'a> {
-    font: Font<'a>,
-    resolution: f32,
+    /// Height (distance between descent and ascent) of test glyphs, in pixels.
+    pub resolution: f32,
 }
 
 fn main() {
@@ -19,7 +18,7 @@ fn main() {
     println!("density: {:.3}", density);
 }
 
-fn parse_args<'a>() -> DensityTestVariables<'a> {
+fn parse_args<'a>() -> DensityTest<'a> {
     let matches = clap::App::new("density")
         .about(
             "Measures the density of TrueType fonts.\nCalculated from the amount inked between the baseline and x-height of lowercase Latin letters.",
@@ -35,13 +34,13 @@ fn parse_args<'a>() -> DensityTestVariables<'a> {
 
     let filename = matches.value_of("FILENAME").unwrap();
 
-    DensityTestVariables {
+    DensityTest {
         font: read_font_from_filename(filename.to_owned()),
         resolution: 256.0,
     }
 }
 
-fn get_font_density(test_vars: &DensityTestVariables) -> f64 {
+fn get_font_density(test_vars: &DensityTest) -> f64 {
     let scale = rusttype::Scale {
         x: test_vars.resolution,
         y: test_vars.resolution,

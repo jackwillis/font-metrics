@@ -1,20 +1,32 @@
 # font-metrics
 
-## fm-xheight
+This package provides the binaries
+`fm-cpp`, `fm-density`, and `fm-xheight`.
+
+All binaries support the ``--help`` and ``--version`` options.
+
+## Installation
+
+Depends on Rust/Cargo and XeLaTeX.
+
+    cargo install font_metrics
+
+## Programs
+
+### fm-xheight
 
 Calculates the x-height/cap height ratio of a TrueType font.
 
     USAGE:
         fm-xheight.exe <FILENAME>
 
-    FLAGS:
-        -h, --help       Prints help information
-        -V, --version    Prints version information
-
     ARGS:
         <FILENAME>    The location of the TrueType font to measure (ex. C:\Windows\Fonts\Tahoma.ttf)
 
-## fm-density
+    OUTPUT:
+        x-height ratio: 1117/1489 (~0.750)
+
+### fm-density
 
 Measures the density of TrueType fonts.
 Calculated from the amount inked between the baseline and x-height of lowercase Latin letters.
@@ -22,14 +34,13 @@ Calculated from the amount inked between the baseline and x-height of lowercase 
     USAGE:
         fm-density.exe <FILENAME>
 
-    FLAGS:
-        -h, --help       Prints help information
-        -V, --version    Prints version information
-
     ARGS:
         <FILENAME>    The location of the TrueType font to measure (ex. C:\Windows\Fonts\Constan.ttf)
 
-## fm-cpp
+    OUTPUT:
+        density: 0.397
+
+### fm-cpp
 
 Measures the characters per pica (cpp) of TrueType fonts on a standard test page.
 
@@ -37,8 +48,6 @@ Measures the characters per pica (cpp) of TrueType fonts on a standard test page
         fm-cpp.exe [FLAGS] [OPTIONS] <FILENAME>
 
     FLAGS:
-        -h, --help       Prints help information
-        -V, --version    Prints version information
         -v, --verbose    Prints extra debug messages
 
     OPTIONS:
@@ -47,3 +56,6 @@ Measures the characters per pica (cpp) of TrueType fonts on a standard test page
 
     ARGS:
         <FILENAME>    The location of the TrueType font to measure (ex. C:\Windows\Fonts\Arial.ttf)
+
+    OUTPUT:
+        characters per pica: Ratio { numer: 727, denom: 352 } (~2.07)

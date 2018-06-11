@@ -5,8 +5,8 @@ use num_rational::Ratio;
 use rusttype::{Font, FontCollection};
 
 pub fn read_font_from_filename<'a>(filename: String) -> Font<'a> {
-    let data =
-        std::fs::read(&filename).expect(format!("Couldn't open font file {}", &filename).as_str());
+    let data = ::std::fs::read(&filename)
+        .expect(format!("Couldn't open font file {}", &filename).as_str());
 
     let font_collection =
         FontCollection::from_bytes(data).expect("Could not parse font file as TrueType");
