@@ -1,9 +1,11 @@
 [package]
 name = "font_metrics"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Jack Willis <jack@attac.us>"]
 license = "GPL-3.0"
-description = "binaries for measuring TrueType fonts"
+description = "Provides binaries (fm-cpp, fm-density, fm-xheight) for measuring TrueType fonts."
+documentation = "https://docs.rs/font_metrics/"
+repository = "https://github.com/jackwillis/font-metrics/"
 
 [dependencies]
 clap = "2.31"
@@ -12,10 +14,6 @@ num-rational = "0.1"
 pdf-extract = "0.4"
 rusttype = "0.6"
 tempdir = "0.3"
-
-[lib]
-name = "font_metrics"
-path = "src/lib.rs"
 
 [[bin]]
 name = "fm-xheight"
