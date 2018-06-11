@@ -51,16 +51,16 @@ fn calculate_font_density(test_vars: &DensityTestVariables) -> f64 {
     let get_glyph =
         |id: char| -> PositionedGlyph { test_vars.font.glyph(id).scaled(scale).positioned(origin) };
 
+    let x_glyph: PositionedGlyph = get_glyph('x');
+
     let test_alphabet = "abcdefghijklmnopqrstuvwxyz".chars();
     let test_glyphs = test_alphabet.into_iter().map(get_glyph);
-
-    let x_glyph = get_glyph('x');
 
     let densities: Vec<f64> = test_glyphs
         .map(|test_glyph| calculate_glyph_density(&x_glyph, &test_glyph))
         .collect();
 
-    let densities_sum = densities.iter().sum::<f64>();
+    let densities_sum: f64 = densities.iter().sum();
     densities_sum / (densities.len() as f64)
 }
 

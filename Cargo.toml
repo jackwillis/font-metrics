@@ -1,6 +1,6 @@
 [package]
 name = "font_metrics"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Jack Willis <jack@attac.us>"]
 
 [dependencies]
@@ -18,13 +18,13 @@ name = "font_metrics"
 path = "src/lib.rs"
 
 [[bin]]
-name = "xheight"
-path = "bin/xheight.rs"
+name = "fm-xheight"
+path = "bin/fm-xheight.rs"
 
 [[bin]]
-name = "cpp"
-path = "bin/cpp.rs"
+name = "fm-cpp"
+path = "bin/fm-cpp.rs"
 
 [[bin]]
-name = "density"
-path = "bin/density.rs"
+name = "fm-density"
+path = "bin/fm-density.rs"
