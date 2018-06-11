@@ -15,7 +15,7 @@ use tempdir::TempDir;
 
 use font_metrics::ratio_into_f32;
 
-struct CppTestVariables {
+struct CharsPerPicaTest {
     font_name: String,
     font_directory: String,
     font_size: i32,
@@ -29,7 +29,7 @@ fn main() {
     let temp_dir = TempDir::new("cpp").expect("Couldn't create temporary directory");
 
     let pdf_path = generate_pdf(temp_dir.path(), &test_variables);
-    let cpp_ratio = analyze_pdf(&pdf_path, &test_variables);
+    let chars_per_pica: Ratio<i32> = analyze_pdf(&pdf_path, &test_variables);
 
     temp_dir
         .close()
@@ -37,12 +37,12 @@ fn main() {
 
     println!(
         "characters per pica: {:?} (~{:.2})",
-        cpp_ratio,
-        ratio_into_f32(cpp_ratio).unwrap()
+        chars_per_pica,
+        ratio_into_f32(chars_per_pica).unwrap()
     );
 }
 
-fn parse_args() -> CppTestVariables {
+fn parse_args() -> CharsPerPicaTest {
     let matches = clap::App::new("cpp")
         .about(
             "Measures the characters per pica (cpp) of TrueType fonts on a standard test page.",
@@ -85,7 +85,7 @@ fn parse_args() -> CppTestVariables {
         panic!(format!("{:?} is not a file!", font_path));
     }
 
-    CppTestVariables {
+    CharsPerPicaTest {
         font_name: {
             let stem = font_path.file_stem().unwrap();
             stem.to_str().unwrap().to_owned()
@@ -103,7 +103,7 @@ fn parse_args() -> CppTestVariables {
     }
 }
 
-fn generate_pdf(working_dir: &Path, test_vars: &CppTestVariables) -> PathBuf {
+fn generate_pdf(working_dir: &Path, test_vars: &CharsPerPicaTest) -> PathBuf {
     let tex_path = working_dir.join("cpp.tex");
     let mut file = File::create(&tex_path).expect("Couldn't create temp file");
     let latex_source = generate_latex_source(test_vars);
@@ -134,7 +134,7 @@ fn generate_pdf(working_dir: &Path, test_vars: &CppTestVariables) -> PathBuf {
     PathBuf::from(working_dir.join("cpp.pdf"))
 }
 
-fn generate_latex_source(test_vars: &CppTestVariables) -> String {
+fn generate_latex_source(test_vars: &CharsPerPicaTest) -> String {
     format!(
         r"
 \documentclass[{font_size}pt]{{article}}
@@ -154,24 +154,11 @@ fn generate_latex_source(test_vars: &CppTestVariables) -> String {
     )
 }
 
-fn analyze_pdf(path: &Path, vars: &CppTestVariables) -> Ratio<i32> {
+fn analyze_pdf(path: &Path, vars: &CharsPerPicaTest) -> Ratio<i32> {
     let document = lopdf::Document::load(path).unwrap();
     let text = extract_text(document);
 
-    chars_per_line(text) / vars.text_width
-}
-
-fn chars_per_line(text: String) -> Ratio<i32> {
-    let lines: Vec<&str> = text.trim().lines().collect();
-
-    // throw away the last line since it's usually not full
-    let lines_except_last: &[&str] = &lines[0..lines.len() - 1];
-
-    let total_chars = lines_except_last
-        .iter()
-        .fold(0, |sum, line| sum + line.len());
-
-    Ratio::new(total_chars as i32, lines.len() as i32)
+    avg_chars_per_line(text) / vars.text_width
 }
 
 fn extract_text(document: lopdf::Document) -> String {
@@ -181,4 +168,18 @@ fn extract_text(document: lopdf::Document) -> String {
         pdf_extract::output_doc(&document, &mut output_device);
     }
     buffer
+}
+
+fn avg_chars_per_line(text: String) -> Ratio<i32> {
+    let lines: Vec<&str> = text.trim().lines().collect();
+
+    // throw away the last line since it's usually not full
+    // and would skew the results
+    let lines_except_last: &[&str] = &lines[0..lines.len() - 1];
+
+    let total_chars = lines_except_last
+        .iter()
+        .fold(0, |sum, line| sum + line.len());
+
+    Ratio::new(total_chars as i32, lines.len() as i32)
 }

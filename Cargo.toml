@@ -1,6 +1,6 @@
 [package]
 name = "font_metrics"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Jack Willis <jack@attac.us>"]
 license = "GPL-3.0"
 description = "binaries for measuring TrueType fonts"
@@ -8,9 +8,7 @@ description = "binaries for measuring TrueType fonts"
 [dependencies]
 clap = "2.31"
 lopdf = "0.15"
-num-bigint = "0.1"
 num-rational = "0.1"
-num-traits = "0.2"
 pdf-extract = "0.4"
 rusttype = "0.6"
 tempdir = "0.3"
