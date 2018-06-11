@@ -167,7 +167,7 @@ dependencies = [
 
 [[package]]
 name = "font_metrics"
-version = "0.1.0"
+version = "0.0.2"
 dependencies = [
  "clap 2.31.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "lopdf 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)",
