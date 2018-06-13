@@ -13,7 +13,7 @@ struct DarknessTest<'a> {
 
 fn main() {
     let test_vars = parse_args();
-    let density = get_font_density(&test_vars);
+    let density = measure_font_darkness(&test_vars);
 
     println!("darkness: {:.3}", density);
 }
@@ -38,15 +38,15 @@ fn parse_args<'a>() -> DarknessTest<'a> {
     }
 }
 
-fn get_font_density(test_vars: &DarknessTest) -> f64 {
+fn measure_font_darkness(test: &DarknessTest) -> f64 {
     let scale = rusttype::Scale {
-        x: test_vars.resolution,
-        y: test_vars.resolution,
+        x: test.resolution,
+        y: test.resolution,
     };
     let origin = rusttype::point(0.0, 0.0);
 
     let get_glyph =
-        |id: char| -> PositionedGlyph { test_vars.font.glyph(id).scaled(scale).positioned(origin) };
+        |id: char| -> PositionedGlyph { test.font.glyph(id).scaled(scale).positioned(origin) };
 
     let x_glyph: PositionedGlyph = get_glyph('x');
 
