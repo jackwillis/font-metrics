@@ -4,7 +4,7 @@ extern crate rusttype;
 use font_metrics::read_font_from_filename;
 use rusttype::{Font, PositionedGlyph};
 
-struct DensityTest<'a> {
+struct DarknessTest<'a> {
     pub font: Font<'a>,
 
     /// Height (distance between descent and ascent) of test glyphs, in pixels.
@@ -15,14 +15,12 @@ fn main() {
     let test_vars = parse_args();
     let density = get_font_density(&test_vars);
 
-    println!("density: {:.3}", density);
+    println!("darkness: {:.3}", density);
 }
 
-fn parse_args<'a>() -> DensityTest<'a> {
-    let matches = clap::App::new("density")
-        .about(
-            "Measures the density of TrueType fonts.\nCalculated from the amount inked between the baseline and x-height of lowercase Latin letters.",
-        )
+fn parse_args<'a>() -> DarknessTest<'a> {
+    let matches = clap::App::new("fm-darkness")
+        .about("Measures the darkness of TrueType fonts.")
         .author("https://github.com/jackwillis/font-metrics/")
         .arg(
             clap::Arg::with_name("FILENAME")
@@ -34,13 +32,13 @@ fn parse_args<'a>() -> DensityTest<'a> {
 
     let filename = matches.value_of("FILENAME").unwrap();
 
-    DensityTest {
+    DarknessTest {
         font: read_font_from_filename(filename.to_owned()),
         resolution: 256.0,
     }
 }
 
-fn get_font_density(test_vars: &DensityTest) -> f64 {
+fn get_font_density(test_vars: &DarknessTest) -> f64 {
     let scale = rusttype::Scale {
         x: test_vars.resolution,
         y: test_vars.resolution,
@@ -64,12 +62,12 @@ fn get_font_density(test_vars: &DensityTest) -> f64 {
 }
 
 fn get_glyph_density(x_glyph: &PositionedGlyph, test_glyph: &PositionedGlyph) -> f64 {
-    let x_glyph_bb = x_glyph.pixel_bounding_box().unwrap();
-    let test_glyph_bb = test_glyph.pixel_bounding_box().unwrap();
+    let x_glyph_box = x_glyph.pixel_bounding_box().unwrap();
+    let test_glyph_box = test_glyph.pixel_bounding_box().unwrap();
 
-    let x_glyph_height = x_glyph_bb.max.y - x_glyph_bb.min.y;
-    let y_direction_adjust = test_glyph_bb.min.y - x_glyph_bb.min.y;
-    let test_glyph_width = test_glyph_bb.max.x - test_glyph_bb.min.x;
+    let x_glyph_height = x_glyph_box.max.y - x_glyph_box.min.y;
+    let y_direction_adjust = test_glyph_box.min.y - x_glyph_box.min.y;
+    let test_glyph_width = test_glyph_box.max.x - test_glyph_box.min.x;
 
     let mut inked_pixels = 0;
 

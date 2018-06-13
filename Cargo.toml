@@ -25,6 +25,6 @@ path = "bin/fm-cpp.rs"
 doc = true
 
 [[bin]]
-name = "fm-density"
-path = "bin/fm-density.rs"
+name = "fm-darkness"
+path = "bin/fm-darkness.rs"
 doc = true
