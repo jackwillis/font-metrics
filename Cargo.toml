@@ -17,14 +17,11 @@ tempdir = "0.3"
 [[bin]]
 name = "fm-xheight"
 path = "bin/fm-xheight.rs"
-doc = true
 
 [[bin]]
-name = "fm-cpp"
-path = "bin/fm-cpp.rs"
-doc = true
+name = "fm-fit"
+path = "bin/fm-fit.rs"
 
 [[bin]]
 name = "fm-darkness"
 path = "bin/fm-darkness.rs"
-doc = true

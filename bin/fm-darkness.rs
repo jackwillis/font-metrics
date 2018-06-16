@@ -9,6 +9,28 @@ struct DarknessTest<'a> {
 
     // Height (distance between descent and ascent) of test glyphs, in pixels.
     pub resolution: f32,
+
+    pub alphabet: Alphabet
+}
+
+enum Alphabet {
+    English,
+    Russian,
+    Greek,
+    Custom(String)
+}
+
+use Alphabet::*;
+
+impl Alphabet {
+    fn chars(&self) -> std::str::Chars {
+        match &self {
+            English => "AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz",
+            Russian => "АаБбВвГгДдЕеЁёЖжЗзИиЙйКкЛлМмНнОоПпРрСсТтУуФфХхЦцЧчШшЩщЪъЫыЬьЭэЮюЯя",
+            Greek => "ΑαΒβΓγΔδΕεΖζΗηΘθΙιΚκΛλΜμΝνΞξΟοΠπΡρΣσςΤτΥυΦφΧχΨψΩω",
+            Custom(str) => str
+        }.chars()
+    }
 }
 
 fn main() {
@@ -30,9 +52,8 @@ fn measure_font_darkness(test: &DarknessTest) -> f64 {
         glyph.scaled(scale).positioned(origin)
     };
 
-    // The lowercase Latin alphabet should be a good enough test fixture...
-    let test_alphabet = "abcdefghijklmnopqrstuvwxyz".chars();
-    let test_glyphs = test_alphabet.into_iter().map(get_scaled_glyph);
+    // Select the glyphs we're going to measure
+    let test_glyphs = test.alphabet.chars().map(get_scaled_glyph);
 
     // Only measure within the vertical bounds of the little 'x'.
     let x_glyph = get_scaled_glyph('x');
@@ -60,11 +81,11 @@ fn measure_glyph_darkness(glyph: &PositionedGlyph, frame: &Rect<i32>) -> f64 {
 
     // Iterate over every pixel in `glyph_bounds`...
     glyph.draw(|_x, y, value| {
-        // ...But we really want to measure in `frame`.
-        // Account for `frame` and `glyph_bounds` starting at different `.min.y`'s.
+        // ...But we want to measure within `frame`'s vertical bounds.
+        // Adjust for `frame` and `glyph_bounds` starting at different `.min.y`'s.
         let y: i32 = (y as i32) + y_adjust;
 
-        // Return early if out of frame.
+        // Check that we're inside `frame`'s vertical bounds.
         if y < 0 || y >= height {
             return;
         }
@@ -104,5 +125,7 @@ fn parse_args<'a>() -> DarknessTest<'a> {
     let resolution = matches.value_of("resolution").unwrap()
         .parse::<i32>().unwrap() as f32;
 
-    DarknessTest { font, resolution }
+    let alphabet = Alphabet::Greek;
+
+    DarknessTest { font, resolution, alphabet }
 }
