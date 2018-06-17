@@ -11,6 +11,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+use clap::{Arg, Error, ErrorKind};
 use num_rational::Ratio;
 use tempdir::TempDir;
 
@@ -27,22 +28,20 @@ struct FitTest {
 }
 
 fn main() {
-    let test_variables = parse_args();
+    let test: FitTest = parse_args();
 
     let temp_dir = TempDir::new("cpp").expect("Couldn't create temporary directory");
 
-    let pdf_path = generate_pdf(temp_dir.path(), &test_variables);
-    let chars_per_pica: Ratio<i32> = analyze_pdf(&pdf_path, &test_variables);
-
-    temp_dir
-        .close()
-        .expect("Couldn't delete temporary directory");
+    let pdf_path = generate_pdf(temp_dir.path(), &test);
+    let fit: Ratio<i32> = analyze_pdf(&pdf_path, &test);
 
     println!(
-        "characters per pica: {:?} (~{:.2})",
-        chars_per_pica,
-        ratio_into_f32(chars_per_pica).unwrap()
+        "fit in characters per pica: {:?} (~{:.2})",
+        fit,
+        ratio_into_f32(fit).unwrap()
     );
+
+    temp_dir.close().expect("Couldn't delete temporary directory");
 }
 
 fn generate_pdf(working_dir: &Path, test: &FitTest) -> PathBuf {
@@ -131,81 +130,12 @@ fn avg_chars_per_line(text: String) -> Ratio<i32> {
 }
 
 fn parse_args() -> FitTest {
-    let app = clap::App::new("fm-fit")
-        .about(
-            "Measures the fit in characters per pica (cpp) of TrueType fonts on a standard LuaLaTeX test page.",
-        )
-        .author("https://github.com/jackwillis/font-metrics/")
-        .version(crate_version!())
-        .arg(
-            clap::Arg::with_name("FILENAME")
-                .help("The location of the TrueType font to measure (ex. C:\\Windows\\Fonts\\Arial.ttf)")
-                .required(true)
-                .index(1)
-        )
-        .arg(
-            clap::Arg::with_name("size")
-                .short("s")
-                .long("size")
-                .value_name("points")
-                .help("Set font size")
-                .takes_value(true)
-                .default_value("12"),
-        )
-        .arg(
-            clap::Arg::with_name("width")
-                .short("w")
-                .long("width")
-                .value_name("picas")
-                .help("Set line width of the test page")
-                .takes_value(true)
-                .default_value("32"),
-        )
-        .arg(
-            clap::Arg::with_name("sample")
-                .short("S")
-                .long("sample")
-                .value_name("filename")
-                .help("File to load sample text from.")
-                .takes_value(true)
-        )
-        .arg(
-            clap::Arg::with_name("language")
-                .short("l")
-                .long("language")
-                .value_name("name")
-                .help("Language package for polyglossia (https://github.com/reutenauer/polyglossia) to load.")
-                .takes_value(true)
-        )
-        .arg(
-            clap::Arg::with_name("english")
-                .short("E")
-                .long("english")
-                .help("Set --language to \"english\" and use built-in English sample text.")
-        ).
-        arg(
-            clap::Arg::with_name("russian")
-                .short("R")
-                .long("russian")
-                .help("Set --language to \"russian\" and use built-in Russian sample text.")
-        )
-        .arg(
-            clap::Arg::with_name("ratio")
-                .short("r")
-                .long("ratio")
-                .help("Display answer as ratio instead of floating-point number.")
-        )
-        .arg(
-            clap::Arg::with_name("verbose")
-                .short("v")
-                .long("verbose")
-                .help("Prints extra debug messages")
-        );
+    let matches = cli().get_matches();
 
-    let matches = app.get_matches();
-
-    let font_filename = matches.value_of("FILENAME").unwrap();
-    let font_path = Path::new(font_filename);
+    let font_path = {
+        let font_filename = matches.value_of("filename").unwrap();
+        Path::new(font_filename)
+    };
 
     if !font_path.is_file() {
         panic!(format!("{:?} is not a file!", font_path));
@@ -222,17 +152,118 @@ fn parse_args() -> FitTest {
             dir_str.replace("\\", "/") // fontspec hates Windows-style paths
         },
         font_size: {
-            let value = matches.value_of("size").unwrap();
-            value.parse::<i32>().unwrap()
+            let capture = matches.value_of("size").unwrap();
+            capture.parse::<i32>().unwrap()
         },
         text_width: {
-            let value = matches.value_of("width").unwrap();
-            value.parse::<i32>().unwrap()
+            let capture = matches.value_of("width").unwrap();
+            capture.parse::<i32>().unwrap()
         },
-        language: String::from("english"),
-        sample_text: String::from(include_str!("../resources/english.example.txt")),
+        language: {
+            match matches.value_of("language") {
+                // Manually setting a language overrides the presets
+                Some(language) => language,
+
+                None => {
+                    if matches.is_present("english") {
+                        "english"
+                    }
+                    else if matches.is_present("russian") {
+                        "russian"
+                    }
+                    else {
+                        let msg = "Language not set! Use --language <lang>, or a preset: --english or --russian.";
+                        Error::with_description(msg, ErrorKind::EmptyValue).exit();
+                    }
+                }
+            }.to_owned()
+        },
+        sample_text: {
+            match matches.value_of("sample") {
+                Some(_filename) => {
+                    "yikes"
+                },
+                None => {
+                    include_str!("../resources/english.example.tex")
+                }
+            }.to_owned()
+        },
         verbose: matches.is_present("verbose"),
     }
+}
+
+fn cli() -> clap::App<'static, 'static> {
+    clap::App::new("fm-fit")
+        .about(
+            "Measures the fit in characters per pica (cpp) of TrueType fonts on a standard LuaLaTeX test page.",
+        )
+        .author("https://github.com/jackwillis/font-metrics/")
+        .version(crate_version!())
+        .arg(
+            Arg::with_name("filename")
+                .value_name("FONT.ttf")
+                .help("The TrueType font to measure (ex. C:\\Windows\\Fonts\\Arial.ttf)")
+                .required(true)
+                .index(1)
+        )
+        .arg(
+            Arg::with_name("size")
+                .short("s")
+                .long("size")
+                .value_name("points")
+                .help("Set font size")
+                .takes_value(true)
+                .default_value("12"),
+        )
+        .arg(
+            Arg::with_name("width")
+                .short("w")
+                .long("width")
+                .value_name("picas")
+                .help("Set line width of the test page")
+                .takes_value(true)
+                .default_value("32"),
+        )
+        .arg(
+            Arg::with_name("sample")
+                .short("S")
+                .long("sample")
+                .value_name("filename.tex")
+                .help("File containing sample text for the test.")
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("language")
+                .short("l")
+                .long("language")
+                .value_name("name")
+                .help("Language package for polyglossia (https://github.com/reutenauer/polyglossia) to load.")
+                .takes_value(true)
+        )
+        .arg(
+            Arg::with_name("english")
+                .short("E")
+                .long("english")
+                .help("Set --language to \"english\" and use built-in English sample text.")
+        ).
+        arg(
+            Arg::with_name("russian")
+                .short("R")
+                .long("russian")
+                .help("Set --language to \"russian\" and use built-in Russian sample text.")
+        )
+        .arg(
+            Arg::with_name("ratio")
+                .short("r")
+                .long("ratio")
+                .help("Display answer as ratio instead of floating-point number.")
+        )
+        .arg(
+            Arg::with_name("verbose")
+                .short("v")
+                .long("verbose")
+                .help("Prints extra debug messages")
+        )
 }
 
 // "Помимо рабочего движения, в Швейцарии существует и социалистическое женское движение. Издается двухнедельный журнал «Застрельщица». Социалистки разделяются на группы, которые по своим организационным формам сходны совершенно с партийной социалистической организацией. Тяжелые экономические условия во время войны, промышленный кризис, который уже в течение нескольких лет надвигается, и не прекращающееся вздорожание жизни пробудили женщину из инертного состояния и толкнули ее в ряды профессиональных и политических организаций. В последних громадных, массовых демонстрациях и забастовках женщины-пролетарии играли роль фермента, который двигал и толкал на дальнейшую борьбу. Особенно в больших городах происходили грандиозные женские демонстрации против дороговизны, которые заканчивались порой нападением на чиновников и разгромом лавок.",
