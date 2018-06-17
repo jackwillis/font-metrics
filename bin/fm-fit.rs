@@ -11,7 +11,7 @@ use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-use clap::{Arg, Error, ErrorKind};
+use clap::Arg;
 use num_rational::Ratio;
 use tempdir::TempDir;
 
@@ -24,60 +24,14 @@ struct FitTest {
     text_width: i32,
     language: String,
     sample_text: String,
+    display_as_ratio: bool,
     verbose: bool,
 }
 
-fn main() {
-    let test: FitTest = parse_args();
-
-    let temp_dir = TempDir::new("cpp").expect("Couldn't create temporary directory");
-
-    let pdf_path = generate_pdf(temp_dir.path(), &test);
-    let fit: Ratio<i32> = analyze_pdf(&pdf_path, &test);
-
-    println!(
-        "fit in characters per pica: {:?} (~{:.2})",
-        fit,
-        ratio_into_f32(fit).unwrap()
-    );
-
-    temp_dir.close().expect("Couldn't delete temporary directory");
-}
-
-fn generate_pdf(working_dir: &Path, test: &FitTest) -> PathBuf {
-    let tex_path: PathBuf = working_dir.join("cpp.tex");
-    let mut file = File::create(&tex_path).expect("Couldn't create temp file");
-    let latex_source = generate_latex_source(test);
-
-    if test.verbose {
-        println!("{}", latex_source);
-    }
-
-    file.write_all(latex_source.as_bytes())
-        .expect("Couldn't write to temp file");
-
-    let tex_path: String = tex_path.into_os_string().into_string().unwrap();
-    let mut lualatex = std::process::Command::new("lualatex");
-    let command = lualatex
-        .current_dir(&working_dir)
-        .arg("--interaction=nonstopmode")
-        .arg(tex_path);
-
-    if test.verbose {
-        println!("{:?}", command);
-    }
-
-    let status = command.status().expect("lualatex could not be found");
-    if !status.success() {
-        panic!("lualatex did not exit successfully");
-    }
-
-    PathBuf::from(working_dir.join("cpp.pdf"))
-}
-
-fn generate_latex_source(test: &FitTest) -> String {
-    format!(
-        r"
+impl FitTest {
+    fn generate_latex(&self) -> String {
+        format!(
+            r"
 \documentclass{{article}}
 \usepackage{{fontspec, microtype, polyglossia}}
 \pagestyle{{empty}}
@@ -89,21 +43,84 @@ fn generate_latex_source(test: &FitTest) -> String {
 \noindent
 {sample_text}
 \end{{document}}
-    ",
-        font_name = test.font_name,
-        font_directory = test.font_directory,
-        font_size = test.font_size,
-        text_width = test.text_width,
-        language = test.language,
-        sample_text = test.sample_text
-    )
+            ",
+            font_name = self.font_name,
+            font_directory = self.font_directory,
+            font_size = self.font_size,
+            text_width = self.text_width,
+            language = self.language,
+            sample_text = self.sample_text
+        )
+    }
 }
 
-fn analyze_pdf(path: &Path, vars: &FitTest) -> Ratio<i32> {
+fn main() {
+    let test: FitTest = parse_args();
+
+    let temp_dir = TempDir::new("cpp").expect("Couldn't create temporary directory");
+    let pdf_path = generate_pdf(temp_dir.path(), &test);
+
+    let fit: Ratio<i32> = analyze_pdf(&pdf_path, &test);
+
+    if test.display_as_ratio {
+        println!("{:?}", fit);
+    } else {
+        println!("{:.2}", ratio_into_f32(fit).unwrap());
+    }
+
+    temp_dir
+        .close()
+        .expect("Couldn't delete temporary directory");
+}
+
+fn generate_pdf(working_dir: &Path, test: &FitTest) -> PathBuf {
+    // Generate test article
+    let article_path: PathBuf = working_dir.join("fit.tex");
+    let mut article_file = File::create(&article_path).expect("Couldn't create temp file");
+
+    let article_code = test.generate_latex();
+
+    if test.verbose {
+        println!("{}", article_code);
+    }
+
+    article_file
+        .write_all(article_code.as_bytes())
+        .expect(&format!(
+            "Couldn't write to temporary file {:?}",
+            article_file
+        ));
+
+    // Compile test article to PDF
+    let article_path: String = article_path.into_os_string().into_string().unwrap();
+
+    let mut lualatex = std::process::Command::new("lualatex");
+    let command = lualatex
+        .current_dir(&working_dir)
+        .arg("--interaction=nonstopmode")
+        .arg(article_path);
+
+    if test.verbose {
+        println!("{:?}", command);
+    } else {
+        // Suppress debug output from lualatex
+        command.stdout(std::process::Stdio::null());
+    };
+
+    let status = command.status().expect("lualatex could not be found");
+    if !status.success() {
+        panic!("lualatex did not exit successfully");
+    }
+
+    // Return file path of generated PDF
+    PathBuf::from(working_dir.join("fit.pdf"))
+}
+
+fn analyze_pdf(path: &Path, test: &FitTest) -> Ratio<i32> {
     let document = lopdf::Document::load(path).unwrap();
     let text = extract_text(document);
 
-    avg_chars_per_line(text) / vars.text_width
+    avg_chars_per_line(text) / test.text_width
 }
 
 fn extract_text(document: lopdf::Document) -> String {
@@ -141,54 +158,42 @@ fn parse_args() -> FitTest {
         panic!(format!("{:?} is not a file!", font_path));
     }
 
-    FitTest {
-        font_name: {
-            let stem = font_path.file_stem().unwrap();
-            stem.to_str().unwrap().to_owned()
-        },
-        font_directory: {
-            let dir = font_path.parent().unwrap();
-            let dir_str = dir.to_str().unwrap().to_owned();
-            dir_str.replace("\\", "/") // fontspec hates Windows-style paths
-        },
-        font_size: {
-            let capture = matches.value_of("size").unwrap();
-            capture.parse::<i32>().unwrap()
-        },
-        text_width: {
-            let capture = matches.value_of("width").unwrap();
-            capture.parse::<i32>().unwrap()
-        },
-        language: {
-            match matches.value_of("language") {
-                // Manually setting a language overrides the presets
-                Some(language) => language,
+    let font_name = {
+        let stem = font_path.file_stem().unwrap();
+        stem.to_str().unwrap().to_owned()
+    };
 
-                None => {
-                    if matches.is_present("english") {
-                        "english"
-                    }
-                    else if matches.is_present("russian") {
-                        "russian"
-                    }
-                    else {
-                        let msg = "Language not set! Use --language <lang>, or a preset: --english or --russian.";
-                        Error::with_description(msg, ErrorKind::EmptyValue).exit();
-                    }
-                }
-            }.to_owned()
+    let font_directory = {
+        let dir = font_path.parent().unwrap();
+        let dir_str = dir.to_str().unwrap().to_owned();
+        dir_str.replace("\\", "/") // fontspec hates Windows-style paths
+    };
+
+    let font_size = value_t!(matches, "size", i32).unwrap_or_else(|e| e.exit());
+    let text_width = value_t!(matches, "width", i32).unwrap_or_else(|e| e.exit());
+    let language = value_t!(matches, "language", String).unwrap_or_else(|e| e.exit());
+
+    let sample_text = match matches.value_of("sample") {
+        Some(_filename) => "yikes",
+        None => match language.as_str() {
+            "english" => include_str!("../resources/english.example.tex"),
+            "russian" => include_str!("../resources/russian.example.tex")
+            _ => "uh oh",
         },
-        sample_text: {
-            match matches.value_of("sample") {
-                Some(_filename) => {
-                    "yikes"
-                },
-                None => {
-                    include_str!("../resources/english.example.tex")
-                }
-            }.to_owned()
-        },
-        verbose: matches.is_present("verbose"),
+    }.to_owned();
+
+    let display_as_ratio = matches.is_present("ratio");
+    let verbose = matches.is_present("verbose");
+
+    FitTest {
+        font_name,
+        font_directory,
+        font_size,
+        text_width,
+        language,
+        sample_text,
+        display_as_ratio,
+        verbose,
     }
 }
 
@@ -197,7 +202,6 @@ fn cli() -> clap::App<'static, 'static> {
         .about(
             "Measures the fit in characters per pica (cpp) of TrueType fonts on a standard LuaLaTeX test page.",
         )
-        .author("https://github.com/jackwillis/font-metrics/")
         .version(crate_version!())
         .arg(
             Arg::with_name("filename")
@@ -229,7 +233,7 @@ fn cli() -> clap::App<'static, 'static> {
                 .short("S")
                 .long("sample")
                 .value_name("filename.tex")
-                .help("File containing sample text for the test.")
+                .help("File containing sample text for the test. Optional for languages \"english\" and \"russian\", which have default sample texts.")
                 .takes_value(true)
         )
         .arg(
@@ -237,20 +241,9 @@ fn cli() -> clap::App<'static, 'static> {
                 .short("l")
                 .long("language")
                 .value_name("name")
-                .help("Language package for polyglossia (https://github.com/reutenauer/polyglossia) to load.")
+                .help("Language package for polyglossia to load.")
                 .takes_value(true)
-        )
-        .arg(
-            Arg::with_name("english")
-                .short("E")
-                .long("english")
-                .help("Set --language to \"english\" and use built-in English sample text.")
-        ).
-        arg(
-            Arg::with_name("russian")
-                .short("R")
-                .long("russian")
-                .help("Set --language to \"russian\" and use built-in Russian sample text.")
+                .default_value("english")
         )
         .arg(
             Arg::with_name("ratio")
@@ -265,5 +258,3 @@ fn cli() -> clap::App<'static, 'static> {
                 .help("Prints extra debug messages")
         )
 }
-
-// "Помимо рабочего движения, в Швейцарии существует и социалистическое женское движение. Издается двухнедельный журнал «Застрельщица». Социалистки разделяются на группы, которые по своим организационным формам сходны совершенно с партийной социалистической организацией. Тяжелые экономические условия во время войны, промышленный кризис, который уже в течение нескольких лет надвигается, и не прекращающееся вздорожание жизни пробудили женщину из инертного состояния и толкнули ее в ряды профессиональных и политических организаций. В последних громадных, массовых демонстрациях и забастовках женщины-пролетарии играли роль фермента, который двигал и толкал на дальнейшую борьбу. Особенно в больших городах происходили грандиозные женские демонстрации против дороговизны, которые заканчивались порой нападением на чиновников и разгромом лавок.",

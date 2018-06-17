@@ -10,14 +10,14 @@ struct DarknessTest<'a> {
     // Height (distance between descent and ascent) of test glyphs, in pixels.
     pub resolution: f32,
 
-    pub alphabet: Alphabet
+    pub alphabet: Alphabet,
 }
 
 enum Alphabet {
     English,
     Russian,
     Greek,
-    Custom(String)
+    Custom(String),
 }
 
 use Alphabet::*;
@@ -122,10 +122,17 @@ fn parse_args<'a>() -> DarknessTest<'a> {
     let filename = matches.value_of("FILENAME").unwrap();
     let font = read_font_from_filename(filename.to_owned());
 
-    let resolution = matches.value_of("resolution").unwrap()
-        .parse::<i32>().unwrap() as f32;
+    let resolution = matches
+        .value_of("resolution")
+        .unwrap()
+        .parse::<i32>()
+        .unwrap() as f32;
 
     let alphabet = Alphabet::Greek;
 
-    DarknessTest { font, resolution, alphabet }
+    DarknessTest {
+        font,
+        resolution,
+        alphabet,
+    }
 }

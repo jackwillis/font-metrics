@@ -42,13 +42,13 @@ fn parse_args<'a>() -> XHeightTest<'a> {
     XHeightTest { font }
 }
 
-fn x_height_test(XHeightTest { font }: XHeightTest) -> Ratio<i32> {
+fn x_height_test(test: XHeightTest) -> Ratio<i32> {
     // We measure the height of "vxz" and "HIT" to get
     // x-height and cap height, respectively.
     // These letters are used because they tend to stay
     // close to the actual x/cap heights, without overshooting.
-    let x_height_glyphs = font.glyphs_for("vxz".chars());
-    let cap_height_glyphs = font.glyphs_for("HIT".chars());
+    let x_height_glyphs = test.font.glyphs_for("vxz".chars());
+    let cap_height_glyphs = test.font.glyphs_for("HIT".chars());
 
     let x_heights_sum = x_height_glyphs.map(glyph_height).sum::<i32>();
     let cap_heights_sum = cap_height_glyphs.map(glyph_height).sum::<i32>();

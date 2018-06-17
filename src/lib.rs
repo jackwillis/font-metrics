@@ -1,3 +1,4 @@
+extern crate clap;
 extern crate num_rational;
 extern crate rusttype;
 
